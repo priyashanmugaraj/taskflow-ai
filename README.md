@@ -1,6 +1,10 @@
 # TaskFlow AI 🚀
 
 An AI-powered task management application that helps users organize tasks, manage progress, and break goals into actionable steps using AI.
+## 📸 Application Preview
+
+![TaskFlow AI Dashboard](./taskflow-ai.png)
+
 
 ## ✨ Features
 
