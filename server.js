@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -6,10 +5,43 @@ require("dotenv").config();
 const OpenAI = require("openai");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+//const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(cors());
+let dbConnectionPromise;
+
+async function connectDB() {
+  if (mongoose.connection.readyState === 1) return;
+
+  if (!dbConnectionPromise) {
+    dbConnectionPromise = mongoose
+      .connect(process.env.MONGODB_URI)
+      .catch((error) => {
+        dbConnectionPromise = null;
+        throw error;
+      });
+  }
+
+  await dbConnectionPromise;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI is missing");
+    }
+
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("MongoDB connection error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+    });
+  }
+});
 
 // OpenAI setup
 const openai = new OpenAI({
@@ -34,7 +66,7 @@ const taskSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Task = mongoose.model("Task", taskSchema);
@@ -169,7 +201,7 @@ app.put("/api/tasks/:id", async (req, res) => {
     const task = await Task.findOneAndUpdate(
       { taskId },
       { title: title.trim() },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!task) {
@@ -281,23 +313,25 @@ Return only a numbered list of tasks.`,
 });
 
 // Connect to MongoDB before starting the server
-async function startServer() {
-  try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error("MONGODB_URI is missing from the .env file");
-    }
+// async function startServer() {
+//   try {
+//     if (!process.env.MONGODB_URI) {
+//       throw new Error("MONGODB_URI is missing from the .env file");
+//     }
 
-    await mongoose.connect(process.env.MONGODB_URI);
+//     await mongoose.connect(process.env.MONGODB_URI);
 
-    console.log("MongoDB connected successfully");
+//     console.log("MongoDB connected successfully");
 
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error("Server startup error:", error.message);
-    process.exit(1);
-  }
-}
+//     app.listen(PORT, () => {
+//       console.log(`Server is running on port ${PORT}`);
+//     });
+//   } catch (error) {
+//     console.error("Server startup error:", error.message);
+//     process.exit(1);
+//   }
+// }
+// Connect to MongoDB before handling API requests
 
-startServer();
+//startServer();
+module.exports = app;
